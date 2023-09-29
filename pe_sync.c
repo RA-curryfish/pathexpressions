@@ -1,98 +1,76 @@
-/*INIT_SYNCHRONIZE Toy synchronizer: Sample template
- * Your synchronizer should implement the three functions listed below. 
- */
-
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
 
-typedef struct {
-    int read_count; // For the readers-writers problem
-    int write_count;
-    pthread_mutex_t mutex;
-    pthread_cond_t read_cond;
-    pthread_cond_t write_cond;
-    // Add other state fields based on the path expressions
-} sync_state;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+int counter = 0;
 
-sync_state state;
+typedef struct {
+    pthread_mutex_t lock;
+    pthread_cond_t cond;
+    int value;
+} semaphore_t;
+
+void init_semaphore(semaphore_t *s, int value) {
+    pthread_mutex_init(&s->lock, NULL);
+    pthread_cond_init(&s->cond, NULL);
+    s->value = value;
+}
+
+void P(semaphore_t *s) {
+    pthread_mutex_lock(&s->lock);
+    while (s->value <= 0)
+        pthread_cond_wait(&s->cond, &s->lock);
+    s->value--;
+    pthread_mutex_unlock(&s->lock);
+}
+
+void V(semaphore_t *s) {
+    pthread_mutex_lock(&s->lock);
+    s->value++;
+    pthread_cond_signal(&s->cond);
+    pthread_mutex_unlock(&s->lock);
+}
+
+// These are the implementations for the PP and W functions mentioned in the paper.
+void PP(int *counter, semaphore_t *s1, semaphore_t *s2) {
+    P(s1);
+    (*counter)++;
+    if (*counter == 1) {
+        P(s2);
+    }
+    V(s1);
+}
+
+void W(int *counter, semaphore_t *s1, semaphore_t *s2) {
+    P(s1);
+    (*counter)--;
+    if (*counter == 0) {
+        V(s2);
+    }
+    V(s1);
+}
+
+// Global semaphores
+semaphore_t s1, s2, s3;
 
 void INIT_SYNCHRONIZER(const char *path_exp) {
-    // printf("Initializing Synchronizer with path_exp %s\n", path_exp);
-    // state.read_count = 0;
-    // state.write_count = 0;
-    // pthread_mutex_init(&state.mutex, NULL);
-    // pthread_cond_init(&state.read_cond, NULL);
-    // pthread_cond_init(&state.write_cond, NULL);
-    // Parse the path expression to set up other stat
+    // Initialize global semaphores based on needs. For simplicity, initializing all to 1.
+    init_semaphore(&s1, 1);
+    init_semaphore(&s2, 1);
+    init_semaphore(&s3, 1);
 
-
-    //bases case
-    case (path_exp == "read")
-      return ENTER_OPERATION("read");
-    case (path_exp == "write")
-      return ENTER_OPERATION("write");
-
-    case (path_exp == "{")
-      return ENTER_OPERATION("read");
-    case (path_exp == "}" |)
-    {
-
-    }
-      return ENTER_OPERATION("read");
-    case (path_exp == ";")
-      return ENTER_OPERATION("write");
-    case (path_exp == "+")
-    {
-        P_old(sema)
-        rec(lhs)
-        V_old(sema)
-        P(sema)
-        rec(rhs)
-        V(sema)
-    }
-
-    // after init we want to store the leaf nodes in a string or something
-    
+    // Actual recursive implementation of path expression translation should be here.
+    // The process would involve string parsing, recursive function calls, and invoking the above operations (P, V, PP, W) accordingly.
 }
 
 void ENTER_OPERATION(const char *op_name) {
-    // we will probably iterate over the string
-    // look at the left hand side of the OP_NAME
-     
-    pthread_mutex_lock(&state.mutex);
-    if (strcmp(op_name, "read") == 0) {
-        while (state.write_count > 0) {
-            pthread_cond_wait(&state.read_cond, &state.mutex);
-        }
-        state.read_count++;
-    } else if (strcmp(op_name, "write") == 0) {
-        while (state.read_count > 0 || state.write_count > 0) {
-            pthread_cond_wait(&state.write_cond, &state.mutex);
-        }
-        state.write_count++;
-    }
-    // Handle other operations based on the parsed path expression
-    pthread_mutex_unlock(&state.mutex);
+    // This would involve checking the operation name and calling appropriate synchronization functions (like P or PP) based on the operation.
 }
 
 void EXIT_OPERATION(const char *op_name) {
-    // we will probably iterate over the string
-    // look at the right hand side of the OP_NAME
-
-    pthread_mutex_lock(&state.mutex);
-    if (strcmp(op_name, "read") == 0) {
-        state.read_count--;
-        if (state.read_count == 0) {
-            pthread_cond_signal(&state.write_cond);
-        }
-    } else if (strcmp(op_name, "write") == 0) {
-        state.write_count--;
-        pthread_cond_signal(&state.read_cond);
-        pthread_cond_signal(&state.write_cond);
-    }
-    // Handle other operations based on the parsed path expression
-    pthread_mutex_unlock(&state.mutex);
+    // Similar to ENTER_OPERATION, this would involve checking the operation name and calling appropriate synchronization functions (like V or W).
 }
