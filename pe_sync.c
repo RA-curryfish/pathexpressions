@@ -20,16 +20,48 @@ typedef struct {
 sync_state state;
 
 void INIT_SYNCHRONIZER(const char *path_exp) {
-    printf("Initializing Synchronizer with path_exp %s\n", path_exp);
-    state.read_count = 0;
-    state.write_count = 0;
-    pthread_mutex_init(&state.mutex, NULL);
-    pthread_cond_init(&state.read_cond, NULL);
-    pthread_cond_init(&state.write_cond, NULL);
-    // Parse the path expression to set up other state
+    // printf("Initializing Synchronizer with path_exp %s\n", path_exp);
+    // state.read_count = 0;
+    // state.write_count = 0;
+    // pthread_mutex_init(&state.mutex, NULL);
+    // pthread_cond_init(&state.read_cond, NULL);
+    // pthread_cond_init(&state.write_cond, NULL);
+    // Parse the path expression to set up other stat
+
+
+    //bases case
+    case (path_exp == "read")
+      return ENTER_OPERATION("read");
+    case (path_exp == "write")
+      return ENTER_OPERATION("write");
+
+    case (path_exp == "{")
+      return ENTER_OPERATION("read");
+    case (path_exp == "}" |)
+    {
+
+    }
+      return ENTER_OPERATION("read");
+    case (path_exp == ";")
+      return ENTER_OPERATION("write");
+    case (path_exp == "+")
+    {
+        P_old(sema)
+        rec(lhs)
+        V_old(sema)
+        P(sema)
+        rec(rhs)
+        V(sema)
+    }
+
+    // after init we want to store the leaf nodes in a string or something
+    
 }
 
 void ENTER_OPERATION(const char *op_name) {
+    // we will probably iterate over the string
+    // look at the left hand side of the OP_NAME
+     
     pthread_mutex_lock(&state.mutex);
     if (strcmp(op_name, "read") == 0) {
         while (state.write_count > 0) {
@@ -47,6 +79,9 @@ void ENTER_OPERATION(const char *op_name) {
 }
 
 void EXIT_OPERATION(const char *op_name) {
+    // we will probably iterate over the string
+    // look at the right hand side of the OP_NAME
+
     pthread_mutex_lock(&state.mutex);
     if (strcmp(op_name, "read") == 0) {
         state.read_count--;

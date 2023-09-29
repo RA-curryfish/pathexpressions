@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -std=gnu11 -fcommon
+CFLAGS=-Wall -std=gnu11 -fcommon -g3
 SYNCOBJ=pe_sync.o
 EXTLIBS=-pthread -lrt
 
