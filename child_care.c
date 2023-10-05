@@ -25,11 +25,13 @@
 // The synchro library header
 #include "pe_sync.h"
 
-const char CHILD_ARRIVE[] = "ChildArrive", CHILD_LEAVE[] = "ChildLeave", 
-            CAREGIVER_ARRIVE[] = "CaregiverArrive", CAREGIVER_LEAVE[] = "CaregiverLeave";
+const char CHILD_ARRIVE[] = "ChildArrive", CHILD_LEAVE[] = "ChildLeave", NO_CHILD[]="NoChild", 
+            CAREGIVER_ARRIVE[] = "CaregiverArrive", CAREGIVER_LEAVE[] = "CaregiverLeave", CAREGIVER_OPEN[]= "CaregiverOpen", TWO_CAREGIVER[]="TwoCaregiver";
 
 // TODO: Write the Path Expression solving the Child-care problem
-const char PATH_EXP[] = "";
+const char PATH_EXP[] = "path CaregiverOpen;{ChildArrive} + {NoChild+TwoCaregiver};CaregiverLeave + {ChildLeave+CaregiverArrive} end";
+int NUM_CAREGIVERS=0;
+int NUM_CHILDREN=0;
 
 void set_global_clock()
 {
@@ -51,6 +53,12 @@ void* _handle_thread(void *arg)
     child_arrive(myinfo);
   } else if(strcmp(myinfo->op_name, CHILD_LEAVE) == 0) {
     child_leave(myinfo);
+  } else if(strcmp(myinfo->op_name, CAREGIVER_OPEN) == 0) {
+    caregiver_open(myinfo);
+  } else if(strcmp(myinfo->op_name, NO_CHILD) == 0) {
+    no_child(myinfo);
+  } else if(strcmp(myinfo->op_name, TWO_CAREGIVER) == 0) {
+    two_caregiver(myinfo);
   }
 
   // Stats for verification
@@ -70,7 +78,7 @@ void caregiver_arrive(_thread_info_t *myinfo)
   clock_gettime(CLOCK_MONOTONIC, &myinfo->cs_enter_time);
 
   // YOUR CODE HERE
-
+  NUM_CAREGIVERS++;
   sleep(myinfo->exec_time);
   clock_gettime(CLOCK_MONOTONIC, &myinfo->cs_exit_time);
   EXIT_OPERATION(CAREGIVER_ARRIVE);
@@ -82,7 +90,7 @@ void caregiver_leave(_thread_info_t *myinfo)
   clock_gettime(CLOCK_MONOTONIC, &myinfo->cs_enter_time);
 
   // YOUR CODE HERE
-
+  NUM_CAREGIVERS--;
   sleep(myinfo->exec_time);
   clock_gettime(CLOCK_MONOTONIC, &myinfo->cs_exit_time);
   EXIT_OPERATION(CAREGIVER_LEAVE);
@@ -94,7 +102,7 @@ void child_arrive(_thread_info_t *myinfo)
   clock_gettime(CLOCK_MONOTONIC, &myinfo->cs_enter_time);
 
   // YOUR CODE HERE
-
+  NUM_CHILDREN++;
   sleep(myinfo->exec_time);
   clock_gettime(CLOCK_MONOTONIC, &myinfo->cs_exit_time);
   EXIT_OPERATION(CHILD_ARRIVE);
@@ -106,8 +114,29 @@ void child_leave(_thread_info_t *myinfo)
   clock_gettime(CLOCK_MONOTONIC, &myinfo->cs_enter_time);
 
   // YOUR CODE HERE
-
+  NUM_CHILDREN--;
   sleep(myinfo->exec_time);
   clock_gettime(CLOCK_MONOTONIC, &myinfo->cs_exit_time);
   EXIT_OPERATION(CHILD_LEAVE);
+}
+
+void caregiver_open(_thread_info_t *myinfo)
+{
+  ENTER_OPERATION(CAREGIVER_OPEN);
+  if(NUM_CAREGIVERS>0)
+    EXIT_OPERATION(CAREGIVER_OPEN);
+}
+
+void no_child(_thread_info_t *myinfo)
+{
+  ENTER_OPERATION(NO_CHILD);
+  if(NUM_CHILDREN==0)
+    EXIT_OPERATION(NO_CHILD);
+}
+
+void two_caregiver(_thread_info_t *myinfo)
+{
+  ENTER_OPERATION(TWO_CAREGIVER);
+  if(NUM_CAREGIVERS>1)
+    EXIT_OPERATION(TWO_CAREGIVER);
 }
