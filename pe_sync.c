@@ -303,14 +303,16 @@ void enter_operation_rec(exp_node_t *node, const char *op_name) {
         // Found the operation, apply appropriate synchronization mechanisms here.
         // The actual action might depend on the precise rules of the path expressions.
         // For simplification, using PP(&counter, &s1, &s2) as an example.
-        PP(&counter, &s1, &s2);
-        return;
-    } else if (node->type == 'o' && strcmp(node->op_name, op_name) == 0) {
-        node->
-        // Found the operation, apply appropriate synchronization mechanisms here.
-        // The actual action might depend on the precise rules of the path expressions.
-        // For simplification, using PP(&counter, &s1, &s2) as an example.
-        PP(&counter, &s1, &s2);
+        //PP(&counter, &s1, &s2);
+        if (node->isLeftChildPorPP == 0)
+        {
+            P(node->left_semephore_index);
+        } else
+        {
+            init_semaphore(&s_array[s_array_index],1);
+            PP(&counter,&s_array[s_array_index],node->left_semephore_index);
+            s_array_index++;
+        }
         return;
     }
 
@@ -333,7 +335,17 @@ void exit_operation_rec(exp_node_t *node, const char *op_name) {
         // Found the operation, apply appropriate synchronization mechanisms here.
         // The actual action might depend on the precise rules of the path expressions.
         // For simplification, using VV(&counter, &s1, &s2) as an example.
-        VV(&counter, &s1, &s2);
+        //VV(&counter, &s1, &s2);
+        if(node->isRightChildVorVV == 0)
+        {
+            V(node->right_semephore_index);
+        }
+        else
+        {
+            //need to use the sema generated in PP, so dont init, but create another struct variable that holds the semaphore if it was a seleciton and PP was involved
+            //if s2 was created for PP(c,S2,node->leftsema), then this same s2 must be used here. so this node must carry this info too in the form of an index to a pp_sema array reserved just for pp and vv.
+            VV(&counter, pp_s_array[pp_s_array_index], node->right_semephore_index);
+        }
         return;
     }
 
