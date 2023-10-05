@@ -67,10 +67,12 @@ typedef struct exp_node {
     int isLeftChildPorPP;
     int isLeftPorPP;
     int left_semephore_index;
+    int left_semephore_index_2;
     struct exp_node *right;
     int isRightChildVorVV;
     int isRightVorVV;
     int right_semephore_index;
+    int right_semephore_index_2;
 } exp_node_t;
 
 // Global root of the expression tree
@@ -137,47 +139,57 @@ char* strip_path_and_end(const char *str) {
 }
 
 int find_outter_most_operation(const char **str) {
-    int a = -1;
-    int b = -1;
+    int indexOfOpeningBrace = -1;
+    int indexOfClosingBrace = -1;
 
-    for (int i = 0; i <= strlen(*str); i++)
+    // Allocate new string
+    char new_str[strlen(str)];
+    strncpy(new_str, str, strlen(str));
+
+    for (int i = 0; i < strlen(str); i++)
     {
-        if (*str[i] == ';' || *str[i] == '+')
+        if (new_str[i] == ';' || new_str[i] == '+')
         {
-            if (a == -1) {
+            if (indexOfOpeningBrace == -1) {
                return i;
             } else {
-                if (b != -1) {
+                if (indexOfClosingBrace != -1) {
                     return i;
                 }
             }
-        } else if (*str[i] == '{') {
-            a = i;
-        } else if (*str[i] == '}') {
-            b = i;
+        } else if (new_str[i] == '{') {
+            indexOfOpeningBrace = i;
+        } else if (new_str[i] == '}') {
+            indexOfClosingBrace = i;
         }
     }
-    return -1;
+    return indexOfOpeningBrace;
 }
 
 exp_node_t* parse_pathexp(const char **str, exp_node_t *parentNode, int split_index) {
     int inner_split_index = find_outter_most_operation(str);
+    // Allocate new string
+    char new_str[strlen(str)];
+    strncpy(new_str, str, strlen(str));
 
-    if (*str[split_index] == '+') {
-        return parse_selection(str, parentNode, split_index);
-    } else if (*str[split_index] == ';'){
-        return parse_sequence(str, parentNode, split_index);
-    } else if (*str[split_index] == '{'){
-        return parse_simultaneous(str, parentNode, split_index);
+    if (new_str[inner_split_index] == '+') {
+        return parse_selection(str, parentNode, inner_split_index);
+    } else if (new_str[inner_split_index] == ';'){
+        return parse_sequence(str, parentNode, inner_split_index);
+    } else if (new_str[inner_split_index] == '{'){
+        (*str)++;
+        size_t new_len = strlen(str)-1;
+        char *new_str = (char *)malloc(new_len);
+        strncpy(new_str, str, new_len);
+
+        return parse_simultaneous(new_str, parentNode, 0);
     } else {
-        return parse_operation(str, parentNode, split_index, );
+        return parse_operation(str, parentNode, 0, 0); // default value?
     }
 }
 
 exp_node_t* parse_sequence(const char **str, exp_node_t *parentNode, int split_index) {
     exp_node_t *node = (exp_node_t *)malloc(sizeof(exp_node_t));
-    init_semaphore(&s_array[s_array_index], 0);
-
     node->type = ';';
     node->op_name = NULL;
 
@@ -187,12 +199,33 @@ exp_node_t* parse_sequence(const char **str, exp_node_t *parentNode, int split_i
     node->isLeftChildPorPP = 1;
     node->isRightChildVorVV = 1;
 
-    node->left_semephore_index = s_array_index;
-    node->right_semephore_index = s_array_index;
-    s_array_index++;
+    if (parentNode->type == '{'){
+        if (parentNode->isLeftChildPorPP == 1) {
+            init_semaphore(&s_array[s_array_index], 1);
+            node->left_semephore_index = parentNode->left_semephore_index;
+            node->left_semephore_index_2 = s_array_index;
+        } else if (parentNode->isLeftChildPorPP  == 0) {
+            init_semaphore(&s_array[s_array_index], 1);
+            node->left_semephore_index = s_array_index;
+        }
 
-    node->left = parse_operation(str, node, split_index);
-    skip_spaces(str);
+        if (parentNode->isRightChildVorVV == 1) {
+            node->right_semephore_index = parentNode->right_semephore_index;
+            node->right_semephore_index_2 = s_array_index;
+        } else if (parentNode->isRightChildVorVV == 0) {
+            node->right_semephore_index = s_array_index;
+        }
+
+        s_array_index++;
+    } else {
+        node->isLeftChildPorPP = parentNode->isLeftPorPP;
+        node->left_semephore_index = parentNode->left_semephore_index;
+        node->isRightChildVorVV = parentNode->isRightVorVV;
+        node->right_semephore_index = parentNode->right_semephore_index;
+    }
+
+    node->left = parse_pathexp(str, node, split_index);
+    skip_spaces(&str);
     node->right = parse_pathexp(str, node, split_index);
 
     return node;
@@ -205,39 +238,48 @@ exp_node_t* parse_selection(const char **str, exp_node_t *parentNode, int split_
     node->isLeftPorPP = 1;
     node->isRightVorVV = 1;
     node->isLeftChildPorPP = parentNode->isLeftPorPP;
-    node->isRightChildVorVV = parentNode->isRightChildVorVV;
+    node->isRightChildVorVV = parentNode->isRightVorVV;
 
-    node->left = parse_operation(str, parentNode, split_index);
-    node->right = parse_pathexp(str, parentNode, split_index);
+    char left_str[split_index];
+    strncpy(left_str, str, split_index);
+    const char **left_side = &left_str;
+    char right_str[split_index];
+    char tmp_store[strlen(str)];
+    strncpy(tmp_store, str, strlen(str));
+    strncpy(right_str, &tmp_store[split_index+1], strlen(tmp_store));
+    const char **right_side = &right_str;
 
-    skip_spaces(str);
+    skip_spaces(&left_side);
+    skip_spaces(&right_side);
+    node->left = parse_pathexp(left_side, node, split_index);
+    node->right = parse_pathexp(right_side, node, split_index);
 
     return node;
 }
 
 exp_node_t* parse_simultaneous(const char **str, exp_node_t *parentNode, int split_index) {
     exp_node_t *node = (exp_node_t *)malloc(sizeof(exp_node_t));
-    (*str)++; // skip '{'
     node->type = '{';
     node->op_name = NULL;
-    node->isLeftPorPP =
-    node->isRightVorVV =
-    node->left = parse_pathexp(str, parentNode);
-    skip_spaces(str);
+    node->isLeftPorPP = 0;
+    node->isRightVorVV = 0;
+
+    node->isLeftChildPorPP = 1;
+    node->isRightChildVorVV = 1;
+
+    node->left_semephore_index = parentNode->left_semephore_index;
+    node->right_semephore_index= parentNode->right_semephore_index;
+    node->left = parse_pathexp(str, node, 0);
+    skip_spaces(&str);
 
     node->right = NULL;
-    if (**str == '}') {
-        (*str)++;
-    }
+
     return node;
 }
 
 exp_node_t* parse_operation(const char **str, exp_node_t *parentNode, int split_index, int isRightChild) {
-    skip_spaces(str);
+    skip_spaces(&str);
     const char *start = *str;
-    while (**str && **str != ';' && **str != '{' && **str != '}' && **str != '+') {
-        (*str)++;
-    }
     size_t len = *str - start;
     char *op_name = (char *)malloc(len + 1);
     strncpy(op_name, start, len);
@@ -253,15 +295,37 @@ exp_node_t* parse_operation(const char **str, exp_node_t *parentNode, int split_
         node->left_semephore_index = parentNode->left_semephore_index;
         node->right_semephore_index = parentNode->right_semephore_index;
     } else if (parentNode->type == ';'){
-        if (op_name == "read"){
+        if (isRightChild == 0){
+            node->isLeftPorPP = parentNode->isLeftPorPP;
+            node->isRightVorVV = 0;
+            node->left_semephore_index = parentNode->left_semephore_index;
+            node->left_semephore_index_2 = parentNode->left_semephore_index_2;
 
-        } else {
+            init_semaphore(&s_array[s_array_index], 0);
+            node->right_semephore_index = s_array_index;
 
+        } else if (isRightChild == 1) {
+            node->isLeftPorPP = 0;
+            node->isRightVorVV = parentNode->isLeftPorPP;
+
+            node->left_semephore_index = s_array_index;
+            s_array_index++;
+
+            node->right_semephore_index = parentNode->right_semephore_index;
+            node->right_semephore_index_2 = parentNode->right_semephore_index_2;
         }
-        node->isLeftPorPP = parentNode->isLeftPorPP;
-        node->isRightVorVV = 0;
+    } else if (parentNode->type == '{'){
+        node->isLeftPorPP = 1;
+        node->isRightVorVV = 1;
         node->left_semephore_index = parentNode->left_semephore_index;
         node->right_semephore_index = parentNode->right_semephore_index;
+
+        init_semaphore(&s_array[s_array_index], 1);
+
+        node->left_semephore_index_2 = s_array_index;
+        node->right_semephore_index_2 = s_array_index;
+
+        s_array_index++;
     }
 
     node->type = 'o'; // for operation
@@ -275,6 +339,7 @@ void INIT_SYNCHRONIZER(const char *path_exp) {
     init_semaphore(&s_array[0], 1);
     s_array_index++;
 
+    root = (exp_node_t *)malloc(sizeof(exp_node_t));
     root->type = 'r';
     root->op_name = "root";
     root->right = NULL;
@@ -290,7 +355,7 @@ void INIT_SYNCHRONIZER(const char *path_exp) {
     skip_spaces(&stripped_str);
     fprintf(stderr, "Parsing path expression: %s\n", stripped_str);
 
-    root->left = parse_pathexp(&stripped_str, root);
+    root->left = parse_pathexp(stripped_str, root, 0);
 }
 
 // Recursively find and execute synchronization actions on entering the operation
@@ -306,12 +371,10 @@ void enter_operation_rec(exp_node_t *node, const char *op_name) {
         //PP(&counter, &s1, &s2);
         if (node->isLeftChildPorPP == 0)
         {
-            P(node->left_semephore_index);
+            P(&s_array[node->left_semephore_index]);
         } else
         {
-            init_semaphore(&s_array[s_array_index],1);
-            PP(&counter,&s_array[s_array_index],node->left_semephore_index);
-            s_array_index++;
+            PP(&counter, &s_array[node->left_semephore_index_2], &s_array[node->left_semephore_index]);
         }
         return;
     }
@@ -338,13 +401,13 @@ void exit_operation_rec(exp_node_t *node, const char *op_name) {
         //VV(&counter, &s1, &s2);
         if(node->isRightChildVorVV == 0)
         {
-            V(node->right_semephore_index);
+            V(&s_array[node->right_semephore_index]);
         }
         else
         {
             //need to use the sema generated in PP, so dont init, but create another struct variable that holds the semaphore if it was a seleciton and PP was involved
             //if s2 was created for PP(c,S2,node->leftsema), then this same s2 must be used here. so this node must carry this info too in the form of an index to a pp_sema array reserved just for pp and vv.
-            VV(&counter, pp_s_array[pp_s_array_index], node->right_semephore_index);
+            VV(&counter, &s_array[node->right_semephore_index_2], &s_array[node->right_semephore_index]);
         }
         return;
     }
