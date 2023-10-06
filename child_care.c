@@ -29,7 +29,7 @@ const char CHILD_ARRIVE[] = "ChildArrive", CHILD_LEAVE[] = "ChildLeave", NO_CHIL
             CAREGIVER_ARRIVE[] = "CaregiverArrive", CAREGIVER_LEAVE[] = "CaregiverLeave", CAREGIVER_OPEN[]= "CaregiverOpen", TWO_CAREGIVER[]="TwoCaregiver";
 
 // TODO: Write the Path Expression solving the Child-care problem
-const char PATH_EXP[] = "path CaregiverOpen;{ChildArrive} + {NoChild+TwoCaregiver};CaregiverLeave + {ChildLeave+CaregiverArrive} end";
+const char PATH_EXP[] = "path CaregiverOpen;{ChildArrive}+{NoChild+TwoCaregiver};CaregiverLeave+{ChildLeave+CaregiverArrive} end";
 int NUM_CAREGIVERS=0;
 int NUM_CHILDREN=0;
 
