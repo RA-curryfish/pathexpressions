@@ -169,7 +169,7 @@ char* extract_letters(const char **str) {
     int op_name_index = 0;
 
     for (int i = 0; i < strlen(str); i++) {
-        if (new_str[i] < 'a' || new_str[i] > 'z'){
+        if ((new_str[i] < 'a' || new_str[i] > 'z') || (new_str[i] < 'A' || new_str[i] > 'Z')) {
             break;
         } else {
             op_name[op_name_index] = new_str[i];
@@ -180,6 +180,7 @@ char* extract_letters(const char **str) {
     op_name[op_name_index] = '\0'; // Null-terminate the string.
     return op_name;
 }
+
 
 exp_node_t* parse_pathexp(const char **str, exp_node_t *parentNode, int split_index, int isRightChild) {
     int inner_split_index = find_outter_most_operation(str);
@@ -242,19 +243,19 @@ exp_node_t* parse_sequence(const char **str, exp_node_t *parentNode, int split_i
         node->right_semephore_index = parentNode->right_semephore_index;
     }
 
-    char left_str[split_index];
-    strncpy(left_str, str, split_index);
-    const char **left_side = &left_str;
-    char right_str[split_index];
-    char tmp_store[strlen(str)];
-    strncpy(tmp_store, str, strlen(str));
-    strncpy(right_str, &tmp_store[split_index+1], strlen(tmp_store));
-    const char **right_side = &right_str;
+    char local_str_cpy[strlen(str)];
+    strncpy(local_str_cpy, str, strlen(str));
+    char left_side[split_index];
+    char right_side[strlen(str)-split_index];
 
-    skip_spaces(&left_side);
-    skip_spaces(&right_side);
+    for (int i = 0; i < split_index; i++) {
+        left_side[i] = local_str_cpy[i];
+    }
+    for (int i = 0; i < strlen(str)-split_index; i++) {
+        right_side[i] = local_str_cpy[i+split_index+1];
+    }
+
     node->left = parse_pathexp(left_side, node, split_index, 0);
-    skip_spaces(&str);
     node->right = parse_pathexp(right_side, node, split_index, 1);
 
     return node;
@@ -269,17 +270,18 @@ exp_node_t* parse_selection(const char **str, exp_node_t *parentNode, int split_
     node->isLeftChildPorPP = parentNode->isLeftPorPP;
     node->isRightChildVorVV = parentNode->isRightVorVV;
 
-    char left_str[split_index];
-    strncpy(left_str, str, split_index);
-    const char **left_side = &left_str;
-    char right_str[split_index];
-    char tmp_store[strlen(str)];
-    strncpy(tmp_store, str, strlen(str));
-    strncpy(right_str, &tmp_store[split_index+1], strlen(tmp_store));
-    const char **right_side = &right_str;
+    char local_str_cpy[strlen(str)];
+    strncpy(local_str_cpy, str, strlen(str));
+    char left_side[split_index];
+    char right_side[strlen(str)-split_index];
 
-    skip_spaces(&left_side);
-    skip_spaces(&right_side);
+    for (int i = 0; i < split_index; i++) {
+        left_side[i] = local_str_cpy[i];
+    }
+    for (int i = 0; i < strlen(str)-split_index; i++) {
+        right_side[i] = local_str_cpy[i+split_index+1];
+    }
+
     node->left = parse_pathexp(left_side, node, split_index, 0);
     node->right = parse_pathexp(right_side, node, split_index, 1);
 
