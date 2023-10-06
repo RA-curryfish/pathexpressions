@@ -169,7 +169,7 @@ char* extract_letters(const char **str) {
     int op_name_index = 0;
 
     for (int i = 0; i < strlen(str); i++) {
-        if ((new_str[i] < 'a' || new_str[i] > 'z') || (new_str[i] < 'A' || new_str[i] > 'Z')) {
+        if ((new_str[i] < 'a' || new_str[i] > 'z') && (new_str[i] < 'A' || new_str[i] > 'Z')) {
             break;
         } else {
             op_name[op_name_index] = new_str[i];
