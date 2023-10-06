@@ -14,8 +14,7 @@
 const char EAST_CROSSING[] = "EastCrossing", WEST_CROSSING[] = "WestCrossing";
 
 // TODO: Write the Path Expression solving the Monkey-Crossing problem
-//const char PATH_EXP[] = "";
-const char PATH_EXP[] = "{EastCrossing + WestCrossing}, EastCrossing, WestCrossing";
+const char PATH_EXP[] = "path {EastCrossing+WestCrossing},EastCrossing,WestCrossing end";
 
 void set_global_clock()
 {
